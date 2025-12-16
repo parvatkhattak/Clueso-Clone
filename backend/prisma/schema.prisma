@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  projects      Project[]
+  videos        Video[]
+  teams         TeamMember[]
+  comments      Comment[]
+  activityLogs  ActivityLog[]
+
+  @@map("users")
+}
+
+model Team {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  members  TeamMember[]
+  projects Project[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  userId    String
+  teamId    String
+  role      String   // "admin" | "member"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@map("team_members")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String
+  teamId      String?
+  folderId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  owner   User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  team    Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  folder  Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  videos  Video[]
+
+  @@map("projects")
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  parent   Folder?   @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Folder[]  @relation("FolderHierarchy")
+  projects Project[]
+
+  @@map("folders")
+}
+
+model Video {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  projectId    String
+  ownerId      String
+  status       String   // "processing" | "ready" | "failed"
+  originalUrl  String?
+  processedUrl String?
+  thumbnailUrl String?
+  duration     Int?     // in seconds
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  aiEnhancements AIEnhancement[]
+  comments      Comment[]
+  analytics     VideoAnalytics?
+
+  @@map("videos")
+}
+
+model AIEnhancement {
+  id                String   @id @default(uuid())
+  videoId           String
+  type              String   // "script" | "voiceover" | "zoom" | "caption" | "documentation"
+  originalContent   String?
+  enhancedContent   String?
+  status            String   // "pending" | "processing" | "completed" | "failed"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("ai_enhancements")
+}
+
+model Template {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    String
+  thumbnailUrl String?
+  config      Json     // Template configuration
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("templates")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  videoId   String
+  userId    String
+  timestamp Int?     // timestamp in video (seconds)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model VideoAnalytics {
+  id          String   @id @default(uuid())
+  videoId     String   @unique
+  views       Int      @default(0)
+  likes       Int      @default(0)
+  shares      Int      @default(0)
+  avgWatchTime Int?    // in seconds
+  completionRate Float? // percentage
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("video_analytics")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // "created_project" | "uploaded_video" | "invited_member" etc.
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
