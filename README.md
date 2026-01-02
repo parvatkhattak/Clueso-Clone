@@ -228,7 +228,7 @@ This project is created for educational purposes as part of a technical assignme
 
 ## 📧 Contact
 
-For questions or feedback, please contact [your-email@example.com]
+For questions or feedback, please contact [parvatkhattak03@gmail.com]
 
 ---
 
